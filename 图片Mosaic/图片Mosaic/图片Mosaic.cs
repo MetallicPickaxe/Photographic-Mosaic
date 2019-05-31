@@ -890,7 +890,7 @@ namespace 图片Mosaic
 			}
 			else		// 主要用于统计后颜色值的索引转换处
 			{
-				return 源数_输入;		// ！合理性待考量
+				return default;
 			}
 		}
 		private Int32 Next(Int32 源数_输入) => 源数_输入 + 1;
