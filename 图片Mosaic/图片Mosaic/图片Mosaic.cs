@@ -424,7 +424,6 @@ namespace 图片Mosaic
 
 		#region 统计像素信息()
 		#region 标识
-		// 亦应定名为：生成标识_核心()
 		private (Int32 红, Int32 绿, Int32 蓝) 生成标识_核心(Color 颜色_输入)
 		{
 			(Int32 红, Int32 绿, Int32 蓝) 颜色 = default;
