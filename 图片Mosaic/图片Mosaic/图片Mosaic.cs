@@ -425,7 +425,7 @@ namespace 图片Mosaic
 		#region 统计像素信息()
 		#region 标识
 		// 亦应定名为：生成标识_核心()
-		private (Int32 红, Int32 绿, Int32 蓝) 获取颜色分量(Color 颜色_输入)
+		private (Int32 红, Int32 绿, Int32 蓝) 生成标识_核心(Color 颜色_输入)
 		{
 			(Int32 红, Int32 绿, Int32 蓝) 颜色 = default;
 			Int32 色 = 颜色_输入.ToArgb() & 复颜色掩码;
@@ -589,14 +589,14 @@ namespace 图片Mosaic
 		{
 			(Int32 红, Int32 绿, Int32 蓝) 颜色计数_输出 = default;
 			Point 索引 = 原点;
-			(Int32 红, Int32 绿, Int32 蓝) 容器;
+			(Int32 红, Int32 绿, Int32 蓝) 容器 = default;
 			Bitmap 源图 = new Bitmap(源图_输入);
 
 			for( ; 索引.Y <= ZeroIndexed(源图_输入.Height); 索引.Y++)
 			{
 				for(索引.X = default; 索引.X <= ZeroIndexed(源图_输入.Width); 索引.X++)
 				{
-					容器 = 获取颜色分量(源图.GetPixel(索引.X, 索引.Y));		// ？没有Point版本
+					容器 = 生成标识_核心(源图.GetPixel(索引.X, 索引.Y));		// ？没有Point版本
 
 					颜色计数_输出 = Add(颜色计数_输出, 容器);
 				}
