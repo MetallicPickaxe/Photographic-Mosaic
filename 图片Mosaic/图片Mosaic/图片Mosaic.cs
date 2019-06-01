@@ -3,7 +3,7 @@
 
 
 #region Using
-// using
+// Using
 // 自带
 using System;
 //
@@ -139,7 +139,7 @@ namespace 图片Mosaic
 			Image 目标图_输出 = new Bitmap(源_输入.Width, 源_输入.Height);
 			Image 参考源 = default;
 			Int32 目标索引 = default;
-			Point 起点 = 原点;
+			Point 起点 = default;		// 强调不需要是原点
 			Size 大小 = new Size(填充边长, 填充边长);
 			Point 索引 = 原点;
 
@@ -159,8 +159,12 @@ namespace 图片Mosaic
 					参考源 = 获取图片区域(源_输入, 起点);		// ！Rectangle的构造不优雅，需要引入Point、Size类型
 
 					// 对应序位算法，单色
-					//目标索引 = ZeroIndexed(Convert.ToInt32(Math.Round(获取平均亮度(源色) / 复颜色空间 * 填充源组_输入.标识组.Length)));
+					//目标索引 = ZeroIndexed(Convert.ToInt32(Math.Round(获取平均亮度(参考源) / 复颜色空间 * 填充源组_输入.标识组.Length)));
+					//
 					// 指纹算法
+					// 像素替换版
+					//目标索引 = 比较标识(生成标识(参考源), 填充源组_输入.标识组);
+					// 图片替换版
 					目标索引 = 比较标识(生成标识(参考源), 填充源组_输入.标识组);		// 本身就是0-Indexed的值
 																													// 备用：位图组[目标索引]的最小外接正方形化
 
@@ -317,18 +321,40 @@ namespace 图片Mosaic
 
 		#region 绘制()
 		#region 应用
+		public Image 生成图片(Color 底色_输入)
+		{
+			Size 源大小 = new Size(填充边长, 填充边长);		// 大小不需要0-Indexed值
+			Rectangle 源域 = new Rectangle(原点, 源大小);
+			Image 源图 = new Bitmap(源域.Width, 源域.Height);
+			Point 目标起点 = 原点;
+			Size 目标大小 = 源大小;		// 大小不需要ZeroIndexed0-Indexed值
+													// 将指定大小的区域复制下来
+			Rectangle 目标域 = 源域;
+			Image 目标图 = new Bitmap(目标域.Width, 目标域.Height);
+
+			return 绘制图片_核心(源图, 目标图, 源域, 目标域, 底色_输入);
+		}
+
 		public Image 获取图片区域(Image 源图_输入, Point 源起点_输入)
 		{
 			//Bitmap 目标图_输出 = 源图_输入.Clone(获取域_输入, PixelFormat.Format32bppArgb);		// 官方推荐版
 
 			Size 源大小 = new Size(填充边长, 填充边长);		// 大小不需要0-Indexed值
 			Rectangle 源域 = new Rectangle(源起点_输入, 源大小);
+
+			return 获取图片区域(源图_输入, 源域);
+		}
+
+		public Image 获取图片区域(Image 源图_输入, Rectangle 源域_输入)
+		{
+			//Bitmap 目标图_输出 = 源图_输入.Clone(获取域_输入, PixelFormat.Format32bppArgb);		// 官方推荐版
+
 			Point 目标起点 = 原点;
-			Size 目标大小 = 源大小;		// 大小不需要ZeroIndexed0-Indexed值
-													// 将指定大小的区域复制下来
+			Size 目标大小 = 源域_输入.Size;		// 大小不需要ZeroIndexed0-Indexed值
+															// 将指定大小的区域复制下来
 			Rectangle 目标域 = new Rectangle(目标起点, 目标大小);
 
-			return 绘制图片_核心(源图_输入, 源域, 目标域);
+			return 绘制图片_核心(源图_输入, 源域_输入, 目标域);
 		}
 
 		// ？比Bitmap()的承载力强
@@ -378,8 +404,9 @@ namespace 图片Mosaic
 		private Image 绘制图片_核心(Image 源图_输入, Rectangle 源域_输入, Rectangle 目标域_输入)
 		{
 			Image 目标图 = new Bitmap(目标域_输入.Size.Width, 目标域_输入.Size.Height);		// ？没有Size版本的
+			Color 底色 = Color.Transparent;
 
-			return 绘制图片_核心(源图_输入, 目标图, 源域_输入, 目标域_输入);
+			return 绘制图片_核心(源图_输入, 目标图, 源域_输入, 目标域_输入, 底色);
 		}
 
 		private Image 绘制图片_核心(Image 源图_输入, Image 目标图_输入_输出, Point 目标起点_输入)
@@ -390,11 +417,12 @@ namespace 图片Mosaic
 			Rectangle 源域 = new Rectangle(源起点, 源大小);
 			Size 目标大小 = new Size(填充边长, 填充边长);
 			Rectangle 目标域 = new Rectangle(目标起点_输入, 目标大小);
+			Color 底色 = Color.Transparent;
 
-			return 绘制图片_核心(源图_输入, 目标图_输入_输出, 源域, 目标域);
+			return 绘制图片_核心(源图_输入, 目标图_输入_输出, 源域, 目标域, 底色);
 		}
 
-		private Image 绘制图片_核心(Image 源图_输入, Image 目标图_输入_输出, Rectangle 源域_输入, Rectangle 目标域_输入)		// ！传递Bitmap对象实体还是文件路径待考虑
+		private Image 绘制图片_核心(Image 源图_输入, Image 目标图_输入_输出, Rectangle 源域_输入, Rectangle 目标域_输入, Color 底色_输入)		// ！传递Bitmap对象实体还是文件路径待考虑
 		{
 			// 定义
 			Graphics 生成器 = default;
@@ -403,8 +431,8 @@ namespace 图片Mosaic
 			// 设置生成器
 			生成器 = Graphics.FromImage(目标图_输入_输出);
 			// 背景色
-			//生成器.Clear(Color.White);		// 透明背景增大黑色感，白色效果更好
-															// 比FillRectangle()|FillRegion()省事
+			生成器.Clear(底色_输入);		// 透明背景增大黑色感，白色效果更好
+													// 比FillRectangle()|FillRegion()省事
 			// 绘制质量
 			生成器.CompositingQuality = CompositingQuality.HighQuality;		// 合成质量
 			生成器.SmoothingMode = SmoothingMode.HighQuality;		// 平滑模式质量
@@ -424,7 +452,8 @@ namespace 图片Mosaic
 
 		#region 统计像素信息()
 		#region 标识
-		private (Int32 红, Int32 绿, Int32 蓝) 生成标识_核心(Color 颜色_输入)
+		// 亦可称为：生成标识_核心()
+		private (Int32 红, Int32 绿, Int32 蓝) 获取颜色分量(Color 颜色_输入)
 		{
 			(Int32 红, Int32 绿, Int32 蓝) 颜色 = default;
 			Int32 色 = 颜色_输入.ToArgb() & 复颜色掩码;
@@ -440,29 +469,15 @@ namespace 图片Mosaic
 		// 像素→图片，是生成标识的输入参数前置“取齐”处理
 		private Int32[] 生成标识(Color 颜色_输入)		// ！需要更改为使用绘制()的版本
 		{
-
 			Int32[] 标识_输出 = default;
-			SolidBrush 绘制器 = new SolidBrush(颜色_输入);
-			Int32 取样用图边长 = 填充边长 / 取样压缩因数;		// ！不能整除的情况会自动向下取整，有精度损失，未做防护
-			Size 大小 = new Size(取样用图边长, 取样用图边长);
-			Image 源位图 = new Bitmap(大小.Width, 大小.Height);		// ？没有Size版本
-			Graphics 生成器 = Graphics.FromImage(源位图);
+			Int32 长度 = Convert.ToInt32(Math.Pow(单色深度, 原色数));
 
-			// 设定背景色
-			生成器.Clear(颜色_输入);
+			// Color→Image→标识
+			//标识_输出 = 生成标识(生成图片(颜色_输入));
 
-			// 设置绘制质量
-			生成器.CompositingQuality = CompositingQuality.HighQuality;		// 合成质量
-			生成器.SmoothingMode = SmoothingMode.HighQuality;		// 平滑模式质量
-			生成器.InterpolationMode = InterpolationMode.HighQualityBicubic;		// 插值算法质量
-
-			Rectangle 绘制域 = new Rectangle(default, default, 源位图.Width, 源位图.Height);
-
-			生成器.FillRectangle(绘制器, 绘制域);
-
-			生成器.Dispose();
-
-			标识_输出 = 生成标识(源位图);
+			// Color→标识
+			标识_输出 = new Int32[长度];
+			标识_输出[获取钝化颜色(ZeroIndexed(Convert.ToInt32(Math.Round(获取平均亮度(获取颜色分量(颜色_输入))))))] = 长度;		// Int32[] 生成标识(Image)版逻辑的Color特供简化
 
 			return 标识_输出;
 		}
@@ -595,7 +610,7 @@ namespace 图片Mosaic
 			{
 				for(索引.X = default; 索引.X <= ZeroIndexed(源图_输入.Width); 索引.X++)
 				{
-					容器 = 生成标识_核心(源图.GetPixel(索引.X, 索引.Y));		// ？没有Point版本
+					容器 = 获取颜色分量(源图.GetPixel(索引.X, 索引.Y));		// ？没有Point版本
 
 					颜色计数_输出 = Add(颜色计数_输出, 容器);
 				}
@@ -610,7 +625,7 @@ namespace 图片Mosaic
 		#endregion
 
 		// 与获取版的区别在于上层的额外操作如排序等归为此处，暂空
-		public (List<Int32[]>, Image[]) 生成填充源(String 填充源路径_输入)
+		public (List<Int32[]> 标识组, Image[] 填充源组) 生成填充源(String 填充源路径_输入)
 		{
 			// 定义
 			(List<Int32[]> 标识组, Image[] 填充源组) 填充源_输出 = 获取填充源(填充源路径_输入);
