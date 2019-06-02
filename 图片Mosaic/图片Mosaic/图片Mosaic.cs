@@ -156,10 +156,10 @@ namespace 图片Mosaic
 					// ！该版本需要解决Bitmap不可超过1.5GiB限制的问题
 					//源色 = 源_输入.GetPixel(坐标索引.X, 坐标索引.Y);
 					// 图片替换版
-					参考源 = 获取图片区域(源_输入, 起点);		// ！Rectangle的构造不优雅，需要引入Point、Size类型
+					参考源 = 获取图片区域(源_输入, 起点);
 
 					// 对应序位算法，单色
-					//目标索引 = ZeroIndexed(Convert.ToInt32(Math.Round(获取平均亮度(参考源) / 复颜色空间 * 填充源组_输入.标识组.Length)));
+					//目标索引 = ZeroIndexed(Convert.ToInt32(Math.Round(获取平均亮度(参考源) / 复颜色空间 * 填充源组_输入.标识组.Count)));
 					//
 					// 指纹算法
 					// 像素替换版
@@ -321,24 +321,33 @@ namespace 图片Mosaic
 
 		#region 绘制()
 		#region 应用
-		public Image 生成图片(Color 底色_输入)
+		public Image 生成图片(Color 源色_输入)
 		{
+			// 定义+赋值
+			Point 源起点 = 原点;
 			Size 源大小 = new Size(填充边长, 填充边长);		// 大小不需要0-Indexed值
-			Rectangle 源域 = new Rectangle(原点, 源大小);
+			Rectangle 源域 = new Rectangle(源起点, 源大小);
 			Image 源图 = new Bitmap(源域.Width, 源域.Height);
+			//
 			Point 目标起点 = 原点;
 			Size 目标大小 = 源大小;		// 大小不需要ZeroIndexed0-Indexed值
 													// 将指定大小的区域复制下来
 			Rectangle 目标域 = 源域;
 			Image 目标图 = new Bitmap(目标域.Width, 目标域.Height);
 
-			return 绘制图片_核心(源图, 目标图, 源域, 目标域, 底色_输入);
+			return 绘制图片_核心(源图, 目标图, 源域, 目标域, 源色_输入);
 		}
 
 		public Image 获取图片区域(Image 源图_输入, Point 源起点_输入)
 		{
-			//Bitmap 目标图_输出 = 源图_输入.Clone(获取域_输入, PixelFormat.Format32bppArgb);		// 官方推荐版
+			// 官方推荐版
+			// 定义+赋值
+			//Size 源大小 = new Size(填充边长, 填充边长);		// 大小不需要0-Indexed值
+			//Rectangle 源域 = new Rectangle(源起点_输入, 源大小);
+			//return 源图_输入.Clone(源域, PixelFormat.Format32bppArgb);
 
+			// Graphics.DrawImage()版
+			// 定义+赋值
 			Size 源大小 = new Size(填充边长, 填充边长);		// 大小不需要0-Indexed值
 			Rectangle 源域 = new Rectangle(源起点_输入, 源大小);
 
@@ -347,11 +356,10 @@ namespace 图片Mosaic
 
 		public Image 获取图片区域(Image 源图_输入, Rectangle 源域_输入)
 		{
-			//Bitmap 目标图_输出 = 源图_输入.Clone(获取域_输入, PixelFormat.Format32bppArgb);		// 官方推荐版
-
+			// 定义+赋值
 			Point 目标起点 = 原点;
 			Size 目标大小 = 源域_输入.Size;		// 大小不需要ZeroIndexed0-Indexed值
-															// 将指定大小的区域复制下来
+																// 将指定大小的区域复制下来
 			Rectangle 目标域 = new Rectangle(目标起点, 目标大小);
 
 			return 绘制图片_核心(源图_输入, 源域_输入, 目标域);
@@ -359,15 +367,22 @@ namespace 图片Mosaic
 
 		// ？比Bitmap()的承载力强
 		// 比Bitmap()的选项多
+		// ！PhotoShop下此版本的缩放会出现“虚边”，最终拼接图像的预览中可见些微分界线效果，故改回Bitmap()版本
 		private Image 缩放图形(Image 源图_输入, Size 目标大小_输入)
 		{
-			Point 源起点 = 原点;
-			Size 源大小 = new Size(源图_输入.Width, 源图_输入.Height);		// 大小不需要0-Indexed值
-			Rectangle 源域 = new Rectangle(源起点, 源大小);
-			Point 目标起点 = 原点;
-			Rectangle 目标域 = new Rectangle(目标起点, 目标大小_输入);
+			// Graphics.DrawImage()版
+			// 定义+赋值
+			//Point 源起点 = 原点;
+			//Size 源大小 = 源图_输入.Size;		// 大小不需要0-Indexed值
+			//Rectangle 源域 = new Rectangle(源起点, 源大小);
+			//
+			//Point 目标起点 = 原点;
+			//Rectangle 目标域 = new Rectangle(目标起点, 目标大小_输入);
 
-			return 绘制图片_核心(源图_输入, 源域, 目标域);
+			//return 绘制图片_核心(源图_输入, 源域, 目标域);
+
+			// Bitmap()版
+			return new Bitmap(源图_输入, 目标大小_输入.Width, 目标大小_输入.Height);
 		}
 
 		// 保持原比例填充为其最小外接正方形的策略会导致背景过多，使整体图片呈现灰度效果		×
@@ -378,16 +393,15 @@ namespace 图片Mosaic
 		{
 			// 预处理
 			源图_输入 = 长度偶数化(源图_输入);
-			Size 大小 = new Size(源图_输入.Width, 源图_输入.Height);		// 大小不需要0-Indexed
-			Point 源起点 = 设定起点(大小);
 
 			// 定义+赋值
-			Int32 源边长 = Min(大小.Width, 大小.Height);		// 外接时为Max()
-			Point 目标起点 = 原点;
-			Int32 的边长 = 源边长;		// 外接时为Max()
-			Size 源大小 = new Size(的边长, 的边长);		// 大小不需要0-Indexed
-			Size 目标大小 = 源大小;
+			Point 源起点 = 设定起点(源图_输入.Size);
+			Int32 源边长 = Min(源图_输入.Size);		// 外接时为Max()
+			Size 源大小 = new Size(源边长, 源边长);		// 大小不需要0-Indexed
 			Rectangle 源域 = new Rectangle(源起点, 源大小);
+			//
+			Point 目标起点 = 原点;
+			Size 目标大小 = 源大小;
 			Rectangle 目标域 = new Rectangle(目标起点, 目标大小);
 
 			return 绘制图片_核心(源图_输入, 源域, 目标域);
@@ -395,7 +409,8 @@ namespace 图片Mosaic
 
 		private Image 长度偶数化(Image 源图_输入)
 		{
-			Size 目标大小 = new Size(偶数化(源图_输入.Width), 偶数化(源图_输入.Height));
+			// 定义+赋值
+			Size 目标大小 = 偶数化(源图_输入.Size);
 
 			return 缩放图形(源图_输入, 目标大小);
 		}
@@ -403,7 +418,8 @@ namespace 图片Mosaic
 		#region 核心
 		private Image 绘制图片_核心(Image 源图_输入, Rectangle 源域_输入, Rectangle 目标域_输入)
 		{
-			Image 目标图 = new Bitmap(目标域_输入.Size.Width, 目标域_输入.Size.Height);		// ？没有Size版本的
+			// 定义+赋值
+			Image 目标图 = new Bitmap(目标域_输入.Size.Width, 目标域_输入.Size.Height);		// ！没有Size版本的
 			Color 底色 = Color.Transparent;
 
 			return 绘制图片_核心(源图_输入, 目标图, 源域_输入, 目标域_输入, 底色);
@@ -411,10 +427,12 @@ namespace 图片Mosaic
 
 		private Image 绘制图片_核心(Image 源图_输入, Image 目标图_输入_输出, Point 目标起点_输入)
 		{
+			// 定义+赋值
 			Point 源起点 = 原点;
-			Size 源大小 = new Size(源图_输入.Width, 源图_输入.Height);		// 大小不需要0-Indexed
-																											// 实与填充边长同值，但如此调用更贴近意义
+			Size 源大小 = 源图_输入.Size;		// 大小不需要0-Indexed
+															// 实与填充边长同值，但如此调用更贴近意义
 			Rectangle 源域 = new Rectangle(源起点, 源大小);
+			//
 			Size 目标大小 = new Size(填充边长, 填充边长);
 			Rectangle 目标域 = new Rectangle(目标起点_输入, 目标大小);
 			Color 底色 = Color.Transparent;
@@ -872,10 +890,12 @@ namespace 图片Mosaic
 
 			return 被除数_输入_输出;
 		}
+		//
+		private Size 偶数化(Size 源_输入) => new Size(偶数化(源_输入.Width), 偶数化(源_输入.Height));
 		private Int32 偶数化(Int32 源_输入) => 源_输入 + ((源_输入 % 偶数因子 == default) ? 0 : 1);
 		//
 		// 逻辑同Math.Min()，1st位兼任小于、等于
-		private Int32 Min(Int32 被比数_输入, Int32 比较数_输入) => (被比数_输入 <= 比较数_输入) ? 被比数_输入 : 比较数_输入;
+		private Int32 Min(Size 大小_输入) => (大小_输入.Width <= 大小_输入.Height) ? 大小_输入.Width : 大小_输入.Height;
 		// 逻辑同Math.Max()，1st位兼任大于、等于
 		private Int32 Max(Int32 被比数_输入, Int32 比较数_输入) => (被比数_输入 >= 比较数_输入) ? 被比数_输入 : 比较数_输入;
 		//
