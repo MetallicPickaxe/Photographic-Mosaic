@@ -132,13 +132,8 @@ namespace 图片Mosaic
 		{
 			// 源合法性检测
 
-			// 预处理
-			源_输入 = 调整图片(源_输入);
-
 			// 定义
 			Image 目标图_输出 = new Bitmap(源_输入.Width, 源_输入.Height);
-			Image 参考源 = default;
-			Int32 目标索引 = default;
 			Point 起点 = default;		// 强调不需要是原点
 			Size 大小 = new Size(填充边长, 填充边长);
 			Point 索引 = 原点;
@@ -152,30 +147,40 @@ namespace 图片Mosaic
 					// 预处理
 					起点 = 索引;
 
-					// 像素替换版
-					// ！该版本需要解决Bitmap不可超过1.5GiB限制的问题
-					//源色 = 源_输入.GetPixel(坐标索引.X, 坐标索引.Y);
-					// 图片替换版
-					参考源 = 获取图片区域(源_输入, 起点);
-
-					// 对应序位算法，单色
-					//目标索引 = ZeroIndexed(Convert.ToInt32(Math.Round(获取平均亮度(参考源) / 复颜色空间 * 填充源组_输入.标识组.Count)));
-					//
-					// 指纹算法
-					// 像素替换版
-					//目标索引 = 比较标识(生成标识(参考源), 填充源组_输入.标识组);
-					// 图片替换版
-					目标索引 = 比较标识(生成标识(参考源), 填充源组_输入.标识组);		// 本身就是0-Indexed的值
-																													// 备用：位图组[目标索引]的最小外接正方形化
-
-					目标图_输出 = 绘制图片_核心(填充源组_输入.填充源组[目标索引], 目标图_输出, 起点);
-
-					// 终处理
-					参考源.Dispose();		// ？必要|可行否
+					目标图_输出 = 生成_核心(源_输入, 起点, 填充源组_输入, 目标图_输出);
 				}
 			}
 
 			return 目标图_输出;
+		}
+
+		public Image 生成_核心(Image 源_输入, Point 起点_输入, (List<Int32[]> 标识组, Image[] 填充源组) 填充源组_输入, Image 目标图_输入_输出)
+		{
+			Image 参考源 = default;
+			Int32 目标索引 = default;
+
+			// 像素替换版
+			// ！该版本需要解决Bitmap不可超过1.5GiB限制的问题
+			//源色 = 源_输入.GetPixel(坐标索引.X, 坐标索引.Y);
+			// 图片替换版
+			参考源 = 获取图片区域(源_输入, 起点_输入);
+
+			// 对应序位算法，单色
+			//目标索引 = ZeroIndexed(Convert.ToInt32(Math.Round(获取平均亮度(参考源) / 复颜色空间 * 填充源_入.标识组.Count)));
+			//
+			// 指纹算法
+			// 像素替换版
+			//目标索引 = 比较标识(生成标识(参考源), 填充源组_输入.标识组);
+			// 图片替换版
+			目标索引 = 比较标识(生成标识(参考源), 填充源组_输入.标识组);		// 本身就是0-Indexed的值
+																											// 备用：位图组[目标索引]的最小外接近正方形化
+
+			目标图_输入_输出 = 绘制图片_核心(填充源组_输入.填充源组[目标索引], 目标图_输入_输出, 起点_输入);
+
+			// 终处理
+			参考源.Dispose();		// ？必要|可行否
+
+			return 目标图_输入_输出;
 		}
 
 		// 在不超过Bitmap()容量限制的前提下逼近之
@@ -419,7 +424,8 @@ namespace 图片Mosaic
 		private Image 绘制图片_核心(Image 源图_输入, Rectangle 源域_输入, Rectangle 目标域_输入)
 		{
 			// 定义+赋值
-			Image 目标图 = new Bitmap(目标域_输入.Size.Width, 目标域_输入.Size.Height);		// ！没有Size版本的
+			//Image 目标图 = new Bitmap(目标域_输入.Size.Width, 目标域_输入.Size.Height);		// ！没有Size版本的
+			Image 目标图 = default;
 			Color 底色 = Color.Transparent;
 
 			return 绘制图片_核心(源图_输入, 目标图, 源域_输入, 目标域_输入, 底色);
@@ -447,10 +453,18 @@ namespace 图片Mosaic
 
 			// 赋值
 			// 设置生成器
-			生成器 = Graphics.FromImage(目标图_输入_输出);
-			// 背景色
-			生成器.Clear(底色_输入);		// 透明背景增大黑色感，白色效果更好
-													// 比FillRectangle()|FillRegion()省事
+			if(目标图_输入_输出 == default)
+			{
+				// 背景色
+				目标图_输入_输出 = new Bitmap(目标域_输入.Size.Width, 目标域_输入.Size.Height);
+				生成器 = Graphics.FromImage(目标图_输入_输出);
+				生成器.Clear(底色_输入);		// 透明背景增大黑色感，白色效果更好
+														// 比FillRectangle()|FillRegion()省事
+			}
+			else
+			{
+				生成器 = Graphics.FromImage(目标图_输入_输出);
+			}
 			// 绘制质量
 			生成器.CompositingQuality = CompositingQuality.HighQuality;		// 合成质量
 			生成器.SmoothingMode = SmoothingMode.HighQuality;		// 平滑模式质量
@@ -579,23 +593,23 @@ namespace 图片Mosaic
 		private Decimal 获取平均亮度((Int32 红, Int32 绿, Int32 蓝) 源色_输入)
 		{
 			// 简易算法：3原色值取算术平均
-			//return (OneIndexed(源色_输入.R) + OneIndexed(源色_输入.G) + OneIndexed(源色_输入.B)) / 3);
+			//return (OneIndexed(源色_输入.R) + OneIndexed(源色_输入.G) + OneIndexed(源色_输入.B)) / 原色数);
 
 			// 经典算法：NTSC（National Television Standards Committee）电视制式的色彩空间YIQ中的Y（Luminance）
 			// 来源：https://stackoverflow.com/questions/596216/formula-to-determine-brightness-of-rgb-color
-			return (0.2126M * OneIndexed(源色_输入.红) + 0.7152M * OneIndexed(源色_输入.绿) + 0.0722M * OneIndexed(源色_输入.蓝));		// 标准版，对应某种颜色空间
-																																																					// 1063 : 3576 : 361，3者和为5000
-			//return (0.299M * 源色_输入.R + 0.587M * 源色_输入.G + 0.114M * 源色_输入.B);		// 适用人感知的版本
-			//return Math.Pow( 0.299M * Math.Pow(源色_输入.R, 2) + 0.587 * Math.Pow(源色_输入.G, 2) + 0.114M * Math.Pow(源色_输入.B, 2), 0.5M);		// √(0.299 * R^2 + 0.587 * G^2 + 0.114 * B^2)
-																																																									// 适用人感知的版本，计算上更慢
+			return 0.2126M * 源色_输入.红 + 0.7152M * 源色_输入.绿 + 0.0722M * 源色_输入.蓝;		// 标准版，对应某种颜色空间
+																																					// 1063 : 3576 : 361，3者和为5000
+			//return (0.299M * 源色_输入.红 + 0.587M * 源色_输入.绿 + 0.114M * 源色_输入.蓝);		// 适用人感知的版本
+			//return Math.Pow( 0.299M * Math.Pow(源色_输入.红, 2) + 0.587 * Math.Pow(源色_输入.绿, 2) + 0.114M * Math.Pow(源色_输入.蓝, 2), 0.5M);		// √(0.299 * R^2 + 0.587 * G^2 + 0.114 * B^2)
+																																																										// 适用人感知的版本，计算上更慢
 			//
 			// 扩展版
 			//return Convert.ToUInt64(Math.Round((0.2126M * 源色_输入.红 + 0.7152M * 源色_输入.绿 + 0.0722M * 源色_输入.绿) * 映射比));		// 将 ∈ [1, 256]的亮度比映射到 ∈ [1, 绘制源数量]上面
 
 			// “遵循自然”的算法
-			//return 源色_输入.GetBrightness() * 像素深度;		// 首先，这是个比率，不是均值；其次，内部实现非常粗糙
-																						// 因其是比率，故算“度值”的话需要先还原，即 × 像素深度
-																						// ！这是0-Indexed下进行的计算，有设计误差
+			//return OneIndexed(源色_输入.GetBrightness() * ZeroIndexed(像素深度));		// 首先，这是个比率，不是均值；其次，内部实现非常粗糙
+																																// 因其是比率，故算“度值”的话需要先还原，即 × 像素深度
+																																// ！这是0-Indexed下进行的计算，有设计误差
 		}
 
 		private (Int32 红, Int32 绿, Int32 蓝) 获取平均颜色(Image 源图_输入)
