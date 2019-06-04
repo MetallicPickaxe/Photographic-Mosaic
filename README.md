@@ -12,7 +12,7 @@
 \-
 
 ·样例：  
-//[来源](http://r0k.us/graphics/kodak)：Kodak发布，Rich  Franzen个人网站收藏
+//[来源](http://r0k.us/graphics/kodak)：Kodak发布，Rich  Franzen个人网站收藏  
 \-原图：![原图](https://github.com/MetallicPickaxe/Photographic-Mosaic/blob/master/Read%20Me%E7%94%A8%E5%9B%BE/kodim20.png?raw=true)  
 \-整体直方图均衡化：![]()  
 \-8位色采样生成结果：![8位色采样生成结果](https://github.com/MetallicPickaxe/Photographic-Mosaic/blob/master/Read%20Me%E7%94%A8%E5%9B%BE/kodim20-Mosaic-8%E8%89%B2%E6%A0%A1%E9%AA%8C.png?raw=true)  
