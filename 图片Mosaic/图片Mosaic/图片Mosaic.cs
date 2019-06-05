@@ -680,7 +680,7 @@ namespace 图片Mosaic
 			// 预处理
 			// ！还有1种DirectoryInfo → FileInfo[] → .FullName（String）的方式，待比较
 			String[] 图名组 = Directory.GetFiles(填充源路径_输入, $@"*.jpg", SearchOption.TopDirectoryOnly);		// 仅搜索当前目录
-			//String[] 图名组 = Directory.GetFiles(绘制源路径_输入,ImageFormat.Png.ToString().ToLower(), SearchOption.TopDirectoryOnly);		// 仅搜索当前目录
+			//String[] 图名组 = Directory.GetFiles(绘制源路径_输入,ImageFormat.Png.ToString().ToLowerInvariant(), SearchOption.TopDirectoryOnly);		// 仅搜索当前目录
 																																																				// ！不够优雅
 																																																				// ！不同类型源无法切换、无法兼容，考虑用Image
 			填充源数量 = 图名组.Length;
@@ -953,7 +953,7 @@ namespace 图片Mosaic
 			ImageCodecInfo 编码 = default;
 			foreach(ImageCodecInfo 编码信息 in ImageCodecInfo.GetImageEncoders())
 			{
-				if(编码信息.FormatDescription == 类型_输入.ToUpper())		// ！FormatDescription不一定准确，且不一定和类型名一致，如：JPG、JPEG
+				if(编码信息.FormatDescription == 类型_输入.ToUpperInvariant())		// ！FormatDescription不一定准确，且不一定和类型名一致，如：JPG、JPEG
 				{
 					编码 = 编码信息;
 				}
